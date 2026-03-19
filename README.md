@@ -1,6 +1,6 @@
 # Inception
 
-*This project has been created as part of the 42 curriculum by \<login1\>[, \<login2\>[, \<login3\>[...]]].*
+*This project has been created as part of the 42 curriculum by mcamaren.*
 
 ---
 
@@ -100,11 +100,11 @@ srcs/
 
 - A Linux-based host (or VM) with **Docker** and **Docker Compose** installed
 - `make` utility available
-- Your domain name set to `<login>.42.fr` pointing to `127.0.0.1` in `/etc/hosts`
+- Your domain name set to `mcamaren.42.fr` pointing to `127.0.0.1` in `/etc/hosts`
 
 ```bash
 # Add to /etc/hosts
-127.0.0.1   <login>.42.fr
+127.0.0.1   mcamaren.42.fr
 ```
 
 ### Installation & Launch
