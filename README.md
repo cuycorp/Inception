@@ -1,3 +1,25 @@
+docker compose build
+docker compose create
+docker compose up
+docker compose up -d
+
+
+docker compose --env-file 
+
+
+docker logs
+
+
+sudo docker exec -it mariadb sh
+
+
+
+
+docker images
+docker ps
+
+
+
 # Inception
 
 *This project has been created as part of the 42 curriculum by mcamaren.*
