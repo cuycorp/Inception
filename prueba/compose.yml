@@ -26,7 +26,8 @@ services:
       - inception
 
   wordpress:
-    image: wordpress:php8.2-fpm
+    build: ./wordpress 
+    container_name: wordpressmiau
     environment:
       WORDPRESS_DB_HOST: maria-db
       WORDPRESS_DB_USER: exampleuser
