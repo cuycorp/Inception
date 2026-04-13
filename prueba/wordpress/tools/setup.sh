@@ -23,3 +23,5 @@ sed -i "s/password_here/$WORDPRESS_DB_PASSWORD/" wp-config.php
 sed -i "s/localhost/$WORDPRESS_DB_HOST/" wp-config.php
 
 exec /usr/sbin/php-fpm7.4 -F
+
+
