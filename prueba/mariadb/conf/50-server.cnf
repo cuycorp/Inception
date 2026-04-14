@@ -1,2 +1,19 @@
 [mysqld]
+# Escuchar en todas las interfaces (necesario para comunicacion entre contenedores)
 bind-address = 0.0.0.0
+
+# Puerto estandar de MariaDB
+port = 3306
+
+# Directorio donde se almacenan los datos (montado como volumen)
+datadir = /var/lib/mysql
+
+# Archivo de socket para conexiones locales
+socket = /var/run/mysqld/mysqld.sock
+
+# Desactivar enlaces simbolicos por seguridad
+skip-symbolic-links
+
+# Conjunto de caracteres por defecto (compatible con emojis y caracteres especiales)
+character-set-server = utf8mb4
+collation-server = utf8mb4_general_ci

@@ -47,16 +47,16 @@ services:
 
 volumes:
   wp_data:
-    # driver_opts:
-      # type: none
-      # device: ./home/mcamaren/data/wordpress /para maquina virtual
-      # o: bind
+    driver_opts:
+      type: none
+      device: ${HOME}/data/wordpress
+      o: bind
 
   db_data: 
-    # driver_opts:
-      # type: none
-      # device: ./home/mcamaren/data/maria-db /para maquina virtual
-      # o: bind
+    driver_opts:
+      type: none
+      device: ${HOME}/data/maria-db
+      o: bind
 
 networks:
   inception:

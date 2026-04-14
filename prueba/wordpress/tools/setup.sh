@@ -7,21 +7,54 @@ mkdir -p /var/www/html
 cd /var/www/html
 
 # Download WordPress
-if [ ! -f wp-config.php ]; then
-    wget https://wordpress.org/latest.tar.gz
-    tar -xvf latest.tar.gz --strip-components=1
-    rm latest.tar.gz
+# if [ ! -f wp-config.php ]; then
+#     wget https://wordpress.org/latest.tar.gz
+#     tar -xvf latest.tar.gz --strip-components=1
+#     rm latest.tar.gz
+# fi
+
+# # Configure WordPress
+# cp wp-config-sample.php wp-config.php
+
+# # Matching the variable names from your compose.yml
+# sed -i "s/database_name_here/$WORDPRESS_DB_NAME/" wp-config.php
+# sed -i "s/username_here/$MYSQL_USER/" wp-config.php
+# sed -i "s/password_here/$MYSQL_PASSWORD/" wp-config.php
+# sed -i "s/localhost/$WORDPRESS_DB_HOST/" wp-config.php
+
+# exec /usr/sbin/php-fpm7.4 -F
+
+# Télécharger WordPress si absent
+if [ ! -f wp-load.php ]; then
+    wp core download --allow-root
 fi
 
-# Configure WordPress
-cp wp-config-sample.php wp-config.php
+# Créer wp-config.php si absent
+if [ ! -f wp-config.php ]; then
+    wp config create \
+        --dbname="${WORDPRESS_DB_NAME}" \
+        --dbuser="${MYSQL_USER}" \
+        --dbpass="${MYSQL_PASSWORD}" \
+        --dbhost="${WORDPRESS_DB_HOST}" \
+        --allow-root
+fi
 
-# Matching the variable names from your compose.yml
-sed -i "s/database_name_here/$WORDPRESS_DB_NAME/" wp-config.php
-sed -i "s/username_here/$WORDPRESS_DB_USER/" wp-config.php
-sed -i "s/password_here/$WORDPRESS_DB_PASSWORD/" wp-config.php
-sed -i "s/localhost/$WORDPRESS_DB_HOST/" wp-config.php
+# Installer WordPress si pas encore installé
+if ! wp core is-installed --allow-root; then
+    wp core install \
+        --url="${WORDPRESS_URL}" \
+        --title="${WORDPRESS_TITLE}" \
+        --admin_user="${WORDPRESS_ADMIN_USER}" \
+        --admin_password="${WORDPRESS_ADMIN_PASSWORD}" \
+        --admin_email="${WORDPRESS_ADMIN_EMAIL}" \
+        --allow-root
+fi
+
+if ! wp user get "${WORDPRESS_USER}" --allow-root > /dev/null 2>&1; then
+    wp user create "${WORDPRESS_USER}" "${WORDPRESS_USER_EMAIL}" \
+        --user_pass="${WORDPRESS_USER_PASSWORD}" \
+        --role=author \
+        --allow-root
+fi
 
 exec /usr/sbin/php-fpm7.4 -F
-
-

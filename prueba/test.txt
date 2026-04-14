@@ -1,0 +1,6 @@
+compose.yml
+mariadb
+mariadb.log
+nginx
+test.txt
+wordpress

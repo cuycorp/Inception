@@ -1,14 +1,24 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
-RUN apt-get update && apt-get install -y mariadb-server
+# Instalar servidor y cliente de MariaDB
+RUN apt-get update && \
+    apt-get install -y \
+        mariadb-server \
+        mariadb-client
 
-# Copy custom config
+# Crear directorio para el socket y el PID de MariaDB
+RUN mkdir -p /var/run/mysqld && \
+    chown mysql:mysql /var/run/mysqld
+
+# Copiar configuracion personalizada del servidor
 COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
 
-# Copy init script
-COPY tools/init.sh /init.sh
-RUN chmod +x /init.sh
+# Copiar script de inicializacion
+COPY tools/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 3306
+# # Verificacion de salud del contenedor
+# HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=30s \
+#     CMD mysqladmin ping -h localhost --silent || exit 1
 
-CMD ["/init.sh"]
+ENTRYPOINT ["entrypoint.sh"]
