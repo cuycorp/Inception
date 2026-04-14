@@ -12,8 +12,9 @@ services:
       - inception
 
 
-  maria-db:
-    image: mariadb:lts-ubi9  
+  mariadb:
+    build: ./mariadb
+    container_name: mariadb
     env_file:
     - .env
     # environment: 
@@ -25,6 +26,7 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - inception
+    restart: always
 
   wordpress:
     build: ./wordpress 
@@ -39,7 +41,7 @@ services:
     networks:
       - inception
     depends_on: 
-      - maria-db
+      - mariadb
     volumes:
       - wp_data:/var/www/html
 
