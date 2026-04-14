@@ -1,22 +1,21 @@
 #!/bin/bash
 
-# 1. Ensure directories exist and have right permissions
-mkdir -p /run/mysqld /var/lib/mysql
-chown -R mysql:mysql /var/lib/mysql /run/mysqld
+# Start MariaDB temporarily
+service mariadb start
 
-# 2. Initialize MariaDB data directory if it's empty
-if [ ! -d "/var/lib/mysql/mysql" ]; then
-    echo "Initializing MariaDB data directory..."
-    mysql_install_db --user=mysql --datadir=/var/lib/mysql
-fi
+# Wait for it to be ready
+sleep 2
 
-# 3. Start the daemon
-mysqld_safe --datadir=/var/lib/mysql &
+# Create DB and user from env variables
+mysql -u root -p$MYSQL_ROOT_PASSWORD <<EOF
+CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE;
+CREATE USER IF NOT EXISTS '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
+GRANT ALL PRIVILEGES ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%';
+FLUSH PRIVILEGES;
+EOF
 
-# 4. Wait loop
-until mysqladmin ping >/dev/null 2>&1; do
-    echo "Waiting for MariaDB to wake up..."
-    sleep 2
-done
+# Stop temporary server
+mysqladmin -u root -p$MYSQL_ROOT_PASSWORD shutdown
 
-# ... rest of your script ...
+# Start MariaDB in foreground (REQUIRED)
+exec mysqld_safe
