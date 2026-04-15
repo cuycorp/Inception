@@ -1,10 +1,11 @@
-mkdir -p $HOME/data/wordpress
-mkdir -p $HOME/data/maria-db 
+all: setup up
 
-all: up 
+setup:
+	mkdir -p $$HOME/data/wordpress
+	mkdir -p $$HOME/data/maria-db
 
-up: 
-	@docker-compose -f ./srcs/compose.yml up -d
+up:
+	@docker compose -f ./srcs/compose.yml up -d
 
-down: 
-	@docker-compose -f ./srcs/compose.yml down
+down:
+	@docker compose -f ./srcs/compose.yml down
