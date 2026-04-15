@@ -9,3 +9,14 @@ up:
 
 down:
 	@docker compose -f ./srcs/compose.yml down
+
+downv:
+	@docker compose -f ./srcs/compose.yml down --volumes
+
+clean:
+	@docker compose -f ./srcs/compose.yml down
+
+fclean:
+	@docker compose -f ./srcs/compose.yml down -v --rmi all
+
+re: fclean all
