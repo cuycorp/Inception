@@ -1,8 +1,8 @@
 #!/bin/bash
 
-MYSQL_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
 MYSQL_PASSWORD=$(cat /run/secrets/db_password)
-
+WORDPRESS_ADMIN_PASSWORD=$(cat /run/secrets/wordpress_admin_password.txt)
+WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wordpress_user_password.txt)
 # Ensure PHP-FPM run directory exists
 mkdir -p /run/php
 
@@ -32,7 +32,7 @@ if [ ! -f wp-load.php ]; then
     wp core download --allow-root
 fi
 
-# Créer wp-config.php si absent
+# Créer wp-config.php si absent, connect WordPress à la base de données mariadb
 if [ ! -f wp-config.php ]; then
     wp config create \
         --dbname="${WORDPRESS_DB_NAME}" \
@@ -43,6 +43,7 @@ if [ ! -f wp-config.php ]; then
 fi
 
 # Installer WordPress si pas encore installé
+# This command automates that process by setting the site title, the Admin user, and the admin password instantly.
 if ! wp core is-installed --allow-root; then
     wp core install \
         --url="${WORDPRESS_URL}" \
@@ -53,6 +54,7 @@ if ! wp core is-installed --allow-root; then
         --allow-root
 fi
 
+# Sets up a regular user with the role of author, which allows them to create and manage their own posts but not publish them. This is useful for testing different user roles in WordPress.
 if ! wp user get "${WORDPRESS_USER}" --allow-root > /dev/null 2>&1; then
     wp user create "${WORDPRESS_USER}" "${WORDPRESS_USER_EMAIL}" \
         --user_pass="${WORDPRESS_USER_PASSWORD}" \
