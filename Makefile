@@ -1,7 +1,7 @@
 all: setup up
 
 
-MARIADB_DATA = $(HOME)/data/mariadb
+MARIADB_DATA = $(HOME)/data/maria-db
 WORDPRESS_DATA = $(HOME)/data/wordpress
 
 

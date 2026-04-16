@@ -3,6 +3,7 @@
 MYSQL_PASSWORD=$(cat /run/secrets/db_password)
 WORDPRESS_ADMIN_PASSWORD=$(cat /run/secrets/wordpress_admin_password)
 WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wordpress_user_password)
+
 # Ensure PHP-FPM run directory exists
 mkdir -p /run/php
 
