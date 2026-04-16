@@ -28,7 +28,7 @@ services:
 
   wordpress:
     build: ./requirements/wordpress 
-    container_name: wordpressmiau
+    container_name: wordpress
     env_file:
     - .env
     networks:
@@ -45,8 +45,10 @@ services:
 
 volumes:
   wp_data:
-    driver_opts:
+  #advanced options for volumes, to bind mount a host directory to a container directory
+    driver_opts: 
       type: none
+      #links volume to a directory on the host machine, so that changes in the container are reflected on the host and vice versa
       device: ${HOME}/data/wordpress
       o: bind
 
@@ -59,7 +61,6 @@ volumes:
 networks:
   inception:
     driver: bridge
-
 
 
 secrets:
