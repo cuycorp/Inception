@@ -22,6 +22,9 @@ services:
     networks:
       - inception
     restart: always
+    secrets:
+      - db_root_password
+      - db_password
 
   wordpress:
     build: ./requirements/wordpress 
@@ -34,6 +37,7 @@ services:
       - mariadb
     volumes:
       - wp_data:/var/www/html
+    
 
 volumes:
   wp_data:
@@ -52,3 +56,10 @@ networks:
   inception:
     driver: bridge
 
+
+
+secrets:
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  db_password:
+    file: ../secrets/db_password.txt

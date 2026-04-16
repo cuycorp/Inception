@@ -1,5 +1,8 @@
 #!/bin/bash
 
+MYSQL_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+
 # Ensure PHP-FPM run directory exists
 mkdir -p /run/php
 

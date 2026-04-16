@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+MYSQL_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+
 # Solo inicializar si la base de datos no existe todavia
 if [ ! -d "/var/lib/mysql/${MYSQL_DATABASE}" ]; then
     echo "Primera ejecucion: inicializando base de datos..."
