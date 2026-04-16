@@ -6,6 +6,7 @@ WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wordpress_user_password.txt)
 # Ensure PHP-FPM run directory exists
 mkdir -p /run/php
 
+
 mkdir -p /var/www/html
 cd /var/www/html
 

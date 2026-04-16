@@ -39,8 +39,8 @@ services:
       - wp_data:/var/www/html
     secrets:
       - wordpress_admin_password
+      - wordpress_user_password
       - db_password
-      - wordpress_db_password
     
 
 volumes:
