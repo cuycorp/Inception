@@ -1,108 +1,301 @@
-# README.md
+# Inception
 
-*This project has been created as part of the 42 curriculum by <login>.*
+*This project has been created as part of the 42 curriculum by mcamaren.*
 
 ## Description
 
-This project sets up web infrastructure using Docker. It includes three services running in separate containers and managed with Docker Compose.
+Inception is a system administration and Docker orchestration project that focuses on containerization and infrastructure management. The goal is to set up a multi-container application using Docker Compose, implementing a complete web infrastructure with NGINX, WordPress, and MariaDB, while following security best practices and modern DevOps principles.
 
-The goal is to understand containerization, service isolation, and how different components (web server, database, application) interact together.
-
-The stack typically includes:
-
-* Nginx (web server)
-* WordPress (application)
-* MariaDB (database)
-
-Each service runs in its own container and communicates through a Docker network.
+The project focus on understanding containerization concepts, networking, volume management, and secure credential handling through Docker secrets. All services run in separate containers, communicate through a custom Docker network, and use TLS encryption for secure connections.
 
 ## Instructions
 
-### Run the project
+### Prerequisites
 
+#### Virtual Machine Setup
+
+The project must run in a virtual machine with the following installed:
+
+**Desktop Environment** (for GUI access):
+- `xorg` - X Window System (display server)
+- `xfce4` - Lightweight desktop environment
+- `xfce4-goodies` - Additional XFCE4 components and tools
+- `lightdm` - Display manager (login screen)
+- `firefox-esr` - Web browser for accessing the WordPress application
+
+**Build Tools**:
+- `make` - Build automation tool
+
+**Installation example** (Debian/Ubuntu):
 ```bash
-make
+sudo apt-get update
+sudo apt-get install -y make xorg xfce4 xfce4-goodies lightdm firefox-esr
 ```
 
-### Remove containers
+#### Project Requirements
+
+- Docker and Docker Compose installed on the VM
+- Root or sudo privileges (required for creating data directories and managing Docker)
+- `/etc/hosts` file configured with your domain name (e.g., `127.0.0.1 mcamaren.42.fr`)
+- Internet connection (for downloading base images and packages)
+
+### Configuration
+
+#### 1. Environment Variables (`.env` file)
+
+Create or update the `srcs/.env` file with the following variables:
 
 ```bash
-make down
+# ===== MariaDB Configuration =====
+MYSQL_DATABASE=X        # Database name
+MYSQL_USER=X            # Database user (non-root)
+
+# ===== WordPress Database Connection =====
+WORDPRESS_DB_NAME=X     # Must match MYSQL_DATABASE
+WORDPRESS_DB_USER=X     # Must match MYSQL_USER
+WORDPRESS_DB_HOST=X     # Service name (from docker-compose.yml)
+
+# ===== WordPress Site Configuration =====
+WORDPRESS_URL=X         # Site URL (HTTPS required)
+WORDPRESS_TITLE=X       # Website title
+WORDPRESS_ADMIN_USER=X  # WordPress admin username
+WORDPRESS_ADMIN_EMAIL=X # Admin email
+
+# ===== WordPress Additional User =====
+WORDPRESS_USER=X        # Second WordPress user
+WORDPRESS_USER_EMAIL=X  # User email
+
+# ===== NGINX Configuration =====
+DOMAIN_NAME=X           # Domain name for NGINX SSL certificate and server name
 ```
 
-### Remove container and volumes
+**Important**: Replace all values with your own login and preferences.
 
-```bash
-make downv
+#### 2. Docker Secrets (Sensitive Credentials)
+
+Create the following secret files in the `secrets/` directory with actual passwords:
+
+- `secrets/db_password.txt` - Database user password (referenced as `MYSQL_PASSWORD` in scripts)
+- `secrets/db_root_password.txt` - Database root password (only for root MariaDB access)
+- `secrets/wp_admin_password.txt` - WordPress admin user password
+- `secrets/wp_user_password.txt` - WordPress second user password
+
+**Important**: These files contain sensitive credentials and environment variables must be added to `.gitignore`.
+
+#### 3. Update Data Paths
+
+Modify the `DATA_PATH` variable in the Makefile if needed (default: `/home/mcamaren/data`):
+```makefile
+DATA_PATH = /home/mcamaren/data
 ```
 
-### Full system reset
+This path must exist and be writable by your user, as it stores persistent MariaDB and WordPress data.
 
-```bash
-make fclean
+### Compilation and Installation
+
+The project uses a `Makefile` to simplify Docker Compose operations. Use these commands from the root directory:
+
+| Command | Action | Description |
+| :--- | :--- | :--- |
+| `make` | **Launch** | The default rule. Sets up directories and starts all services. Builds the images and starts containers in the background (detached). Creates the local data folders: `~/data/wordpress` and `~/data/maria-db`. |
+| `make stop` | **Pause** | Stops the containers without removing them. |
+| `make start` | **Resume** | Starts the containers that were previously stopped. |
+| `make down` | **Shutdown** | Stops and removes containers and networks. |
+| `make clean` | **Soft Reset** | Shuts down the stack and removes Docker-managed volumes. |
+| `make fclean` | **Hard Reset** | Executes `clean`, removes all images, and **deletes all host data folders**. |
+| `make re` | **Rebuild** | Triggers a full `fclean` followed by a fresh `all`. |
+| `make logs` | **Debug** | Streams real-time logs from all running containers. |
+| `make ps` | **Status** | Lists all containers and their current health/state. |
+
+### Accessing the Application
+
+Once the containers are running, access the WordPress site via:
+- **HTTPS**: https://mcamaren.42.fr (or your configured domain)
+- **Port**: 443 (HTTPS only, no HTTP access)
+
+## Project Description
+
+### Overview
+
+This project implements a complete web application stack using Docker containers. The infrastructure consists of three main services:
+
+1. **NGINX** - Web server and reverse proxy with TLS/SSL encryption
+2. **WordPress** - Content management system with PHP-FPM
+3. **MariaDB** - Relational database management system
+
+All services are orchestrated using Docker Compose and communicate through a custom bridge network.
+
+### Docker Architecture
+
+The project leverages Docker's containerization technology to create isolated, portable, and reproducible environments. Each service runs in its own container with specific configurations, dependencies, and resource allocations.
+
+#### Key Components:
+
+- **Dockerfiles**: Custom images built from Bookworm base images
+- **Docker Compose**: Orchestration tool managing multi-container dependencies
+- **Docker Networks**: Isolated network for inter-container communication
+- **Docker Volumes**: Persistent storage for database and WordPress files
+- **Docker Secrets**: Secure credential management
+
+### Design Choices
+
+#### 1. Base Image Selection
+- **Debian Bookworm**: Chosen for stability, security updates, and extensive package availability
+- **Penultimate version**: Balances stability with modern features
+
+#### 2. Environment Variables vs Docker Secrets Strategy
+- **Environment Variables (`.env`)**: Used for non-sensitive configuration data (database names, usernames, URLs, emails, domain names)
+- **Docker Secrets (`secrets/` directory)**: Used exclusively for sensitive credentials (passwords, keys)
+- This separation follows the principle of least privilege and prevents accidental exposure of passwords in logs or environment variable listings
+
+#### 3. Service Architecture
+- **NGINX as reverse proxy**: Handles TLS termination and forwards PHP requests to WordPress
+- **PHP-FPM**: Separate process manager for better performance and resource management
+- **Separate database container**: Isolation improves security and scalability
+
+#### 4. Security Measures
+- **TLS 1.2/1.3 only**: Modern encryption protocols
+- **Docker secrets**: Sensitive credentials stored securely
+- **No default passwords**: All credentials externalized
+- **Network isolation**: Services communicate only through defined networks
+
+### Technical Comparisons
+
+#### Virtual Machines vs Docker
+
+| Aspect | Virtual Machines | Docker Containers |
+|--------|-----------------|-------------------|
+| **Isolation** | Complete OS-level isolation with hypervisor | Process-level isolation using kernel features |
+| **Resource Usage** | High - each VM runs full OS (GBs of RAM) | Low - shares host kernel (MBs of RAM) |
+| **Startup Time** | Minutes (full OS boot) | Seconds (process start) |
+| **Portability** | Limited - large VM images | High - lightweight, layered images |
+| **Performance** | Overhead from hypervisor | Near-native performance |
+| **Use Case** | Full isolation, different OS requirements | Microservices, rapid deployment, dev/prod parity |
+
+**Choice**: Docker is ideal for this project due to faster deployment, lower resource consumption, and better scalability for web applications.
+
+#### Secrets vs Environment Variables
+
+| Aspect | Docker Secrets | Environment Variables |
+|--------|---------------|----------------------|
+| **Security** | Encrypted at rest and in transit | Visible in process lists and logs |
+| **Storage** | Mounted as in-memory files (/run/secrets) | Stored in container configuration |
+| **Visibility** | Only accessible by designated services | Can be viewed with `docker inspect` |
+| **Rotation** | Can be updated without rebuilding | Requires container restart |
+| **Best For** | Passwords, API keys, certificates | Non-sensitive configuration |
+
+**Choice**: Docker secrets are used for all sensitive credentials (passwords, keys) to prevent accidental exposure in logs or environment variable listings.
+
+#### Docker Network vs Host Network
+
+| Aspect | Bridge Network (Docker Network) | Host Network |
+|--------|-------------------------------|--------------|
+| **Isolation** | Complete network isolation | Direct host network access |
+| **Port Mapping** | Explicit port publishing required | All ports directly exposed |
+| **Security** | Services only accessible via published ports | All services exposed to host network |
+| **DNS** | Built-in service discovery by name | Manual IP/hostname management |
+| **Performance** | Slight overhead from network bridge | Native network performance |
+| **Use Case** | Microservices, controlled exposure | High-performance networking needs |
+
+**Choice**: Custom bridge network (`inception_net`) provides service isolation, built-in DNS resolution (services can reach each other by name), and controlled port exposure (only NGINX port 443 is published).
+
+#### Docker Volumes vs Bind Mounts
+
+| Aspect | Named Volumes | Bind Mounts |
+|--------|--------------|-------------|
+| **Management** | Docker manages storage location | User specifies exact host path |
+| **Portability** | Platform-independent | Path must exist on host |
+| **Permissions** | Docker handles permissions | May require host permission setup |
+| **Backup** | `docker volume` commands | Standard filesystem tools |
+| **Performance** | Optimized by Docker | Direct filesystem access |
+| **Use Case** | Production data, Docker-managed | Development, host file sharing |
+
+**Choice**: This project uses **bind mounts configured as named volumes**:
+- Explicit control over data location (`/home/mcamaren/data`)
+- Easy backup and inspection of database and WordPress files
+- Persistence across container recreation
+- Data survives `docker-compose down` (but not `make fclean`)
+
+### Configuration Files Structure
+
+#### Version Control
+
+**Committed to Git** (tracked):
+```
+inception/
+├── Makefile                          # Automation commands
+├── README.md                         # Project documentation
+└── srcs/
+    ├── docker-compose.yml            # Service orchestration
+    └── requirements/                 # Dockerfile and configuration
 ```
 
-### Fresh Rebuild
+**NOT Committed to Git** (add to `.gitignore`):
+```
+secrets/                             # Sensitive credentials - CREATE MANUALLY
+├── db_password.txt                   # Database user password
+├── db_root_password.txt              # Database root password
+├── wp_admin_password.txt             # WordPress admin password
+└── wp_user_password.txt              # WordPress second user password
 
-```bash
-make re
+srcs/.env                            # Environment variables - CREATE MANUALLY
 ```
 
-## Project Design Choices
+#### Full Source Files Structure
 
-### Virtual Machines vs Docker
-
-* Virtual Machines: heavy, include full OS
-* Docker: lightweight, faster, shares host OS
-
-Docker was chosen for efficiency and speed.
-
-### Secrets vs Environment Variables
-
-* Environment variables: easy but less secure
-* Secrets: safer, stored separately  
-
-Secrets were used for sensitive data like passwords.
-
-### Docker Network vs Host Network
-
-* Host network: Every container is in the same room. There are no internal room numbers. If one container starts playing music on a speaker (Port 80), no other container can use that speaker because there’s only one
-
-* Docker network: Each container is like an individual apartment with its own room number (Internal IP). They can talk to each other in the hallway, but if someone from the outside world wants to visit, they have to go through the "lobby" (the Host) via a specific port you’ve opened.
-
-Docker network was used to allow safe communication between containers.
-
-### Docker Volumes vs Bind Mounts
-
-* Bind mounts: linked to local files
-* Volumes: managed by Docker, more portable
-
-Volumes were used for database persistence.
+```
+inception/
+├── Makefile                          # Automation commands
+├── secrets/                          # Sensitive credentials (gitignored)
+│   ├── db_password.txt
+│   ├── db_root_password.txt
+│   ├── wp_admin_password.txt
+│   └── wp_user_password.txt
+└── srcs/
+    ├── docker-compose.yml            # Service orchestration
+    ├── .env                          # Environment variables (gitignored)
+    └── requirements/
+        ├── mariadb/
+        │   ├── Dockerfile            # MariaDB image build
+        │   ├── conf/
+        │   │   └── 50-server.cnf     # Database configuration
+        │   └── tools/
+        │       └── script.sh         # Database initialization script
+        ├── nginx/
+        │   ├── Dockerfile            # NGINX image build
+        │   └── conf/
+        │       └── default.conf      # NGINX server configuration
+        └── wordpress/
+            ├── Dockerfile            # WordPress image build
+            └── tools/
+                └── script.sh         # WordPress installation script
+```
 
 ## Resources
 
-* Docker documentation
-https://www.youtube.com/watch?v=XcJzOYe3E6M 
-https://www.youtube.com/watch?v=SAMPOK_lazw&t=153s
+### Documentation and Tutorials
 
-* Docker Compose documentation
-https://docs.docker.com/compose/ 
+- **NGINX TLS Configuration**: [Configure NGINX to use only TLS 1.2 and 1.3](https://www.cyberciti.biz/faq/configure-nginx-to-use-only-tls-1-2-and-1-3/) - Security best practices for NGINX SSL/TLS setup
+- **Debian Releases**: [Official Debian Release Information](https://www.debian.org/releases/index.fr.html) - Understanding Debian version lifecycle
+- **Docker Documentation**: [docs.docker.com](https://docs.docker.com/manuals) - Official Docker documentation for Dockerfile syntax, Docker Compose, volume management, bind mounts, and networking concepts
+- **Wikipedia**: Articles on proxy servers, containerization, NGINX, and related web technologies
 
-* Nginx official docs
-https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
+### AI Usage in This Project
 
-* WordPress docs
-https://learn.wordpress.org/tutorial/introduction-to-wordpress/
+Throughout the development of this project, AI assistance was used for:
 
-* MariaDB docs
-https://www.mariadbtutorial.com/ 
+1. **Exploration and Learning**:
+   - Understanding different approaches to the same problem (e.g., volume configurations)
+   - Comparing implementation strategies (secrets vs environment variables)
+   - Learning Docker Compose syntax and best practices
 
+2. **Code Review and Optimization**:
+   - Suggesting improvements to Dockerfile instructions and README file
+   - Optimizing shell scripts for container initialization
 
-### AI Usage
+3. **Problem-Solving Approaches**:
+   - Providing multiple solutions to implement the same functionality
+   - Suggesting alternative methods according to user input
 
-AI was used to:
-
-* Understand Docker concepts
-* Debug configuration issues
-* Structure the project and documentation
+## Author
 
