@@ -1,204 +1,161 @@
-# Inception - Developer Documentation
+# Developer Documentation
+Generate: general description of the objetive of this file.
 
-This technical manual details the end-to-end environment setup, including secret management, build procedures via Docker Compose, and strategies for managing persistent data volumes.
-
----
-
-## 1. Set up environment from scratch
-
-### Software 
-### Configuration files and secrets
+## Setup the environemnt from scratch
 
 ### Prerequisites
+Generate: Description of the prerequisites needed for this file.
 
-Before setting up the project, ensure your development environment has:
+#### Creating a Virtual Machine with Debian in Oracle VirtualBox
 
-## 🛠️ Prerequisites & Installation
+1. **Download the required software:**
+   - [Oracle VirtualBox](https://www.virtualbox.org/wiki/Downloads) — install the version for your host OS
+   - [Debian ISO](https://www.debian.org/distrib/) — download the latest stable `amd64` netinst image
 
-Before initializing the Inception project, ensure your host system meets the following hardware and software requirements.
+2. **Create a new virtual machine in VirtualBox:**
+   - Open VirtualBox and click **New**
+   - Set a name (e.g. `inception`), choose **Linux** as the type and **Debian (64-bit)** as the version
+   - Allocate at least **2048 MB** of RAM (4096 MB recommended)
+   - Create a virtual hard disk: choose **VDI**, **dynamically allocated**, at least **20 GB**
 
-### System Specifications
-| Requirement | Minimum Recommendation | Purpose |
+3. **Configure the VM before starting:**
+   - Go to **Settings → Storage** and attach the Debian ISO to the optical drive
+   - Go to **Settings → Network** and set Adapter 1 to **Bridged Adapter** (or NAT with port forwarding if preferred)
+
+4. **Install Debian:**
+   - Start the VM and boot from the ISO
+   - Follow the Debian installer: set language, region, hostname (e.g. `inception`), root password, and create a user
+   - Choose a minimal install (no desktop environment required, or install XFCE for GUI access)
+   - Install the GRUB bootloader to the virtual disk when prompted
+
+5. **Post-installation setup:**
+   - Log in and run: `sudo apt-get update && sudo apt-get upgrade -y`
+   - Optionally install a desktop environment for browser access:
+     ```bash
+     sudo apt-get install -y make xorg xfce4 xfce4-goodies lightdm firefox-esr
+     ```
+   - Configure `/etc/hosts` to resolve your domain locally:
+     ```bash
+     echo "127.0.0.1   login.42.fr" | sudo tee -a /etc/hosts
+     ```
+
+#### Installing Docker and Docker Compose
+
+1. **Install prerequisites:**
+   ```bash
+   sudo apt-get install -y ca-certificates curl gnupg lsb-release
+   ```
+
+2. **Add Docker's official GPG key and repository:**
+   ```bash
+   sudo install -m 0755 -d /etc/apt/keyrings
+   curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+     https://download.docker.com/linux/debian $(lsb_release -cs) stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+   ```
+
+3. **Install Docker Engine and Docker Compose:**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   ```
+
+4. **Allow your user to run Docker without sudo:**
+   ```bash
+   sudo usermod -aG docker $USER
+   newgrp docker
+   ```
+
+5. **Verify the installation:**
+   ```bash
+   docker --version
+   docker compose version
+   ```
+
+### Configuration files
+
+
+Project configuration is managed through a `.env` file located at `srcs/.env`. This file contains non-sensitive settings (usernames, database names, site URLs, etc.). Open the file and replace the example values with your own:
+
+```bash
+##############Maria db#############
+MYSQL_DATABASE=wordpress
+MYSQL_USER=exampleuser
+
+#############Wordpress database connection#############
+WORDPRESS_DB_HOST=mariadb:3306
+WORDPRESS_DB_USER=exampleuser
+WORDPRESS_DB_NAME=wordpress
+
+#############Wordpress website configuration#############
+WORDPRESS_URL=https://localhost
+WORDPRESS_TITLE=Inception
+
+#############Admin user#############
+WORDPRESS_ADMIN_USER=jefe
+WORDPRESS_ADMIN_EMAIL=mcamaren@student.42.fr
+
+#############Additional user#############
+WORDPRESS_USER=francesca
+WORDPRESS_USER_EMAIL=cuycorp@gmail.com
+```
+
+**Key variables to customize:**
+
+| Variable | Description | Example |
 | :--- | :--- | :--- |
-| **RAM** | 4GB Available | To support multiple concurrent Docker containers. |
-| **Storage** | 10GB Free Space | For Docker images and persistent MariaDB/WordPress data. |
-| **Privileges** | `sudo` or `root` | Required for Docker socket access and folder creation. |
+| `MYSQL_DATABASE` | Name of the WordPress database | `wordpress` |
+| `MYSQL_USER` | Non-root database user | `wpuser` |
+| `WORDPRESS_DB_HOST` | MariaDB service name and port | `mariadb:3306` |
+| `WORDPRESS_URL` | Full URL of the WordPress site (HTTPS) | `https://login.42.fr` |
+| `WORDPRESS_TITLE` | Title displayed on the website | `My Site` |
+| `WORDPRESS_ADMIN_USER` | WordPress administrator username | `admin` |
+| `WORDPRESS_ADMIN_EMAIL` | Administrator email address | `admin@example.com` |
+| `WORDPRESS_USER` | Second (non-admin) WordPress user | `editor` |
+| `WORDPRESS_USER_EMAIL` | Second user email address | `editor@example.com` |
 
-### Required Toolchain
-| Category | Tools | Installation Command |
+> **Note**: `MYSQL_USER` and `WORDPRESS_DB_USER` must match. `MYSQL_DATABASE` and `WORDPRESS_DB_NAME` must also match. Passwords are **not** set here — they come from the `./secrets/` files.c
+
+### Secrets
+
+Sensitive credentials are stored as plain-text files inside a `./secrets/` folder at the root of the project. These files are mounted into containers as Docker secrets and are **never committed to Git** — make sure the `secrets/` directory is listed in your `.gitignore`.
+
+Create each file manually and write the desired password as its sole content (no quotes, no trailing newline):
+
+```bash
+# Create the secrets directory
+mkdir -p ./secrets
+
+# Database user password
+echo "your_db_password" > ./secrets/db_password.txt
+
+# Database root password
+echo "your_db_root_password" > ./secrets/db_root_password.txt
+
+# WordPress admin user password
+echo "your_wp_admin_password" > ./secrets/wordpress_admin_password.txt
+
+# WordPress second user password
+echo "your_wp_user_password" > ./secrets/wordpress_user_password.txt
+```
+
+| File | Secret | Used by |
 | :--- | :--- | :--- |
-| **Automation** | `make` | `sudo apt-get install -y make` |
-| **Virtualization** | `docker` & `docker-compose` | `sudo apt-get install -y docker.io docker-compose` |
-| **Utilities** | `curl`, `wget`, `vim`, `git` | `sudo apt-get install -y curl wget vim git` |
+| `./secrets/db_password.txt` | Database user password | MariaDB & WordPress |
+| `./secrets/db_root_password.txt` | Database root password | MariaDB only |
+| `./secrets/wordpress_admin_password.txt` | WordPress admin password | WordPress |
+| `./secrets/wordpress_user_password.txt` | WordPress second user password | WordPress |
 
----
-
-
-EDITAR
+> ⚠️ **Important**: Add `secrets/` to your `.gitignore` to avoid exposing credentials.
 
 
-### 💡 Quick Setup Tip
-After installing Docker, ensure your current user is part of the `docker` group to run commands without `sudo`:
-```bash
-sudo usermod -aG docker $USER && newgrp docker
 
-#### Docker Setup (Important!)
 
-1. **Add your user to the docker group** (to run docker without sudo):
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
-```
 
-2. **Verify Docker installation**:
-```bash
-docker --version
-docker compose version
-docker run hello-world
-```
+## Build and Launch the project
 
-### Repository Setup
-
-1. **Clone the project**:
-```bash
-git clone <repository-url>
-cd inception
-```
-
-Expected structure:
-```
-inception/
-├── Makefile
-├── README.md
-├── USER_DOC.md
-├── DEV_DOC.md
-├── secrets/                    # Created by user manually
-└── srcs/
-    ├── docker-compose.yml
-    ├── .env                    # Created by user manually
-    └── requirements/
-        ├── mariadb/
-        ├── nginx/
-        └── wordpress/
-```
-
----
-
-## 2. Build and Launch the project
-
-### Step 1: Create Environment Variables File
-
-Create `srcs/.env` with all required variables:
-
-```bash
-cat > srcs/.env << 'EOF'
-# ===== MariaDB Configuration =====
-MYSQL_DATABASE=X
-MYSQL_USER=X
-
-# ===== WordPress Database Connection =====
-WORDPRESS_DB_NAME=X
-WORDPRESS_DB_USER=X
-WORDPRESS_DB_HOST=X
-
-# ===== WordPress Site Configuration =====
-WORDPRESS_URL=X
-WORDPRESS_TITLE=X
-
-WORDPRESS_ADMIN_USER=X
-WORDPRESS_ADMIN_EMAIL=X
-
-# ===== WordPress Additional User =====
-WORDPRESS_USER=X
-WORDPRESS_USER_EMAIL=X
-
-# ===== NGINX Configuration =====
-DOMAIN_NAME=X
-EOF
-```
-
-**Important**: Replace 'X' with your actual login and preferences.
-
-### Step 2: Create Docker Secrets
-
-Docker secrets are mounted as files in `/run/secrets/` inside containers.
-
-```bash
-# Create secrets directory
-mkdir -p secrets
-
-# Generate secure passwords and save to files
-echo "secure_db_password" > secrets/db_password.txt
-echo "secure_root_password" > secrets/db_root_password.txt
-echo "secure_admin_password" > secrets/wp_admin_password.txt
-echo "secure_user_password" > secrets/wp_user_password.txt
-
-# Verify secrets were created
-ls -la secrets/
-```
-
-### Step 3: Configure /etc/hosts
-
-Add your domain to the hosts file for local DNS resolution:
-
-```bash
-# Check if domain already exists
-grep your_domain /etc/hosts
-
-# If not, add it
-echo "127.0.0.1 your_domain" | sudo tee -a /etc/hosts
-
-# Verify
-cat /etc/hosts | grep your_domain
-```
-
-### Step 4: Prepare Data Directories
-
-The Makefile creates these automatically, but you can pre-create them:
-
-```bash
-# Create data directories
-mkdir -p /home/mcamaren/data/mariadb
-mkdir -p /home/mcamaren/data/wordpress
-
-# Set permissions
-chmod 755 /home/mcamaren/data/mariadb
-chmod 755 /home/mcamaren/data/wordpress
-
-# Verify
-ls -ld /home/mcamaren/data/*/
-```
-
-### Step 5: Add Files to .gitignore
-
-Ensure sensitive files are not committed:
-
-```bash
-cat >> .gitignore << 'EOF'
-# Sensitive credentials
-secrets/
-srcs/.env
-EOF
-
-git add .gitignore
-git commit -m "Add gitignore for sensitive files"
-```
-
----
-
-## 2. Building the Project
-
-### Understanding the Build Process
-
-The Inception project uses:
-- **Makefile**: Orchestrates build commands
-- **Docker Compose**: Manages multi-container orchestration
-- **Dockerfiles**: Define custom images for each service
-
----
-
-### Build Targets
-The project uses a `Makefile` to simplify Docker Compose operations. Use these commands from the root directory:
+A `Makefile` is used to manage the compilation, startup, and cleanup of the project. It wraps all `docker compose` commands so you only need to remember a few short commands to operate the full stack.
 
 | Command | Action | Description |
 | :--- | :--- | :--- |
@@ -212,132 +169,65 @@ The project uses a `Makefile` to simplify Docker Compose operations. Use these c
 | `make logs` | **Debug** | Streams real-time logs from all running containers. |
 | `make ps` | **Status** | Lists all containers and their current health/state. |
 
-## Managing Containers
+> ⚠️ **Warning**: `make fclean` is irreversible. It deletes your actual database files and WordPress media uploads stored on your host machine.
 
-### Container Lifecycle
+## Commands for managing containers and volumes
 
-#### View Container Status
+
+### Status Check
+
+Use this command to view all running containers:
+
 ```bash
-# Using make
 make ps
-
-# Using docker compose
-docker compose -f srcs/docker-compose.yml ps
 ```
 
-**Output columns**:
-- `CONTAINER ID`: Unique identifier
-- `IMAGE`: Docker image used
-- `COMMAND`: Command/process running inside the container
-- `CREATED`: When the container was created
-- `STATUS`: Running/Exited/Restarting
-- `PORTS`: Port mappings (host:container)
-- `NAMES`: Container name
-
-### Container Inspection
-
-#### Inspect Running Container
-```bash
-# View container details
-docker inspect mariadb
-docker inspect wordpress
-docker inspect nginx
-
-# View specific field, example:
-docker inspect -f '{{.State.Running}}' nginx
-docker inspect -f '{{.NetworkSettings.IPAddress}}' wordpress
+**Examples of expected output** : the three services should have UP status
+```
+NAME        IMAGE            COMMAND                  SERVICE     CREATED        STATUS             PORTS
+mariadb     srcs-mariadb     "entrypoint.sh"          mariadb     16 hours ago   Up 2 hours         
+nginx       srcs-nginx       "nginx -g 'daemon of…"   nginx       16 hours ago   Up About an hour   0.0.0.0:443->443/tcp, [::]:443->443/tcp
+wordpress   srcs-wordpress   "/setup.sh"              wordpress   16 hours ago   Up About an hour  
 ```
 
-#### Execute Commands in Container
-```bash
-# Interactive shell
-docker exec -it wordpress bash
-docker exec -it mariadb bash
+###  Service Logs
 
-# Run MariaDB client inside the container
-docker exec -it wordpress bash
-mysql -u root -p
-db_root_password
-SHOW DATABASES;
-USE WORDPRESS;
-SHOW TABLES;
+These commands can be used to monitor service behavior and troubleshoot issues in real-time.
 
-# Run WordPress CLI command
-docker exec -it wordpress bash
-wp --allow-root user list
-```
+| Scope | Command | Description |
+| :--- | :--- | :--- |
+| **Full Stack** | `make logs` | Displays the current log history for all services in the stack. |
+| **NGINX Only** | `docker compose -f srcs/compose.yml logs nginx` | Shows specific logs for the web server and SSL requests. |
+| **WordPress Only** | `docker compose -f srcs/compose.yml logs wordpress` | Shows PHP-FPM activity and application-level errors. |
+| **MariaDB Only** | `docker compose -f srcs/compose.yml logs mariadb` | Shows database initialization and query logs. |
 
-#### View Resource Usage
-```bash
-docker stats
-docker stats mariadb wordpress nginx
-```
 
-### Network Management
 
-#### View Networks
-```bash
-docker network ls
-```
+## Storage of project data 
 
-### Image Management
 
-#### View Images
-```bash
-docker images
-docker images | grep -E "mariadb|wordpress|nginx"
-```
+## Volume  Management
 
-#### Build Images
-```bash
-# Build all images
-docker compose -f srcs/docker-compose.yml build
+This Inception project uses two volumes that are configured to map to local host directories:
 
-# Build specific image
-docker compose -f srcs/docker-compose.yml build nginx
-
-# Build with no cache (forces full rebuild)
-docker compose -f srcs/docker-compose.yml build --no-cache
-```
-
-#### Remove Images
-```bash
-# Remove unused images
-docker image prune
-
-# Remove specific image
-docker rmi inception_mariadb
-docker rmi inception_wordpress
-
-# WARNING: Remove all images
-docker rmi $(docker images -q)
-```
-
----
-
-## Volume and Data Management
-
-### Understanding Volumes in This Project
-
-This project uses **named volumes** that are configured to map to local host directories (bind mounts):
 
 ```yaml
 volumes:
-  mdb:                          # Named volume
-    driver: local
+  wp_data: ## volumen for wordpress data
+    driver_opts: 
+      type: none                      # mount type
+      device: ${HOME}/data/wordpress # host path for wordpress
+      o: bind                        # mount option
+
+  db_data: ## volumen for maria db data
     driver_opts:
-      type: none                # Bind mount type
-      o: bind                   # Mount option
-      device: /home/mcamaren/data/mariadb  # Host path
+      type: none
+      device: ${HOME}/data/maria-db # host path for wordpress
+      o: bind
 ```
 
-**Key advantages**:
-- **Named volumes**: Docker manages the volume lifecycle (listed with `docker volume ls`)
-- **Local driver with bind**: Maps directly to host filesystem for easy access and backup
-- **Explicit control**: You know exactly where data is stored on the host (`/home/mcamaren/data/`)
-- **Easy inspection**: Can browse files directly on host machine
 
-### General Data Directory Structure
+The directory structure for each of the volumes is as follows:
 
 ```
 /home/mcamaren/data/
@@ -355,82 +245,12 @@ volumes:
     ├── wp-login.php        # Login script
     └── index.php           # Home page
 ```
-
-### Data Persistence Behavior
+ The data persitance with the use of Makefile can be summarized as follows:
 
 | Scenario | Database | WordPress Files |
 |----------|----------|-----------------|
-| `make stop` | ✅ Preserved | ✅ Preserved |
-| `make down` | ✅ Preserved | ✅ Preserved |
-| `make clean` | ✅ Preserved | ✅ Preserved |
-| `make up` (after down) | ✅ Reused | ✅ Reused |
-| `make fclean` | ❌ DELETED | ❌ DELETED |
-| Container restart | ✅ Preserved | ✅ Preserved |
-| Host reboot | ✅ Preserved | ✅ Preserved |
+| `make stop` | keeps data | keeps data |
+| `make down` | keeps data | keeps data |
+| `make clean` | keeps data | keeps data |
+| `make fclean` | deletes data | deletes data |
 
-### Managing Volumes
-
-#### View Volume Information
-```bash
-docker volume ls
-docker volume inspect volume_name
-```
-
-### Clearing Data (Development)
-
-```bash
-# Clear only WordPress files (keep database)
-sudo rm -rf /home/mcamaren/data/wordpress/*
-
-# Clear only database (keep WordPress files)
-sudo rm -rf /home/mcamaren/data/mariadb/*
-
-# Clear everything
-make fclean
-```
-
----
-
-### Common Debug Commands
-
-#### Network Debugging
-```bash
-# Check IP addresses
-docker network inspect network_name
-```
-
-#### Database Debugging
-```bash
-# Connect to MariaDB
-docker exec -it mariadb mariadb -u root -p$(cat secrets/db_root_password.txt)
-
-# Inside MariaDB shell
-SHOW DATABASES;
-USE wordpress;
-SHOW TABLES;
-SELECT * FROM wp_users;
-```
-
-#### WordPress Debugging
-```bash
-# Check WordPress installation
-docker exec wordpress wp --allow-root option get siteurl
-
-# List users
-docker exec wordpress wp --allow-root user list
-```
-
-### Resource Monitoring
-
-```bash
-# Monitor all containers
-watch docker stats
-
-# Monitor specific container
-docker stats mariadb
-```
-
----
-*For end-user documentation, see [USER_DOC.md](USER_DOC.md)*
-
-*For project overview and architecture, see [README.md](README.md)*
