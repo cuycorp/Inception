@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:bullseye
 
 # Instalar servidor y cliente de MariaDB
 RUN apt-get update && \

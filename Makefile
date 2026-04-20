@@ -11,36 +11,36 @@ setup:
 
 up:
 	@echo "Building and starting containers"
-	@docker compose -f ./srcs/compose.yml up -d
+	@docker compose -f ./srcs/docker-compose.yml up -d
 
 down:
 	@echo "Stopping and removing containers"
-	@docker compose -f ./srcs/compose.yml down
+	@docker compose -f ./srcs/docker-compose.yml down
 
 stop:
 	@echo "Stopping containers"
-	@docker compose -f ./srcs/compose.yml stop
+	@docker compose -f ./srcs/docker-compose.yml stop
 
 start:
 	@echo "Starting containers"
-	@docker compose -f ./srcs/compose.yml start
+	@docker compose -f ./srcs/docker-compose.yml start
 
 # Clean: Just stops the engine and clears the virtual pipes (volumes/networks)
 clean:
 	@echo "Stopping containers and removing docker-managed volumes..."
-	@docker compose -f ./srcs/compose.yml down -v
+	@docker compose -f ./srcs/docker-compose.yml down -v
 
 # Fclean: The 'Full' wipe. Stops first, then erases the images and physical data.
 fclean: clean
 	@echo "Removing all images and physical data folders..."
-	@docker compose -f ./srcs/compose.yml down -v --rmi all
+	@docker compose -f ./srcs/docker-compose.yml down -v --rmi all
 	@sudo rm -rf $(MARIADB_DATA) $(WORDPRESS_DATA)
 	
 re: fclean all
 
 
 logs:
-	@docker compose -f ./srcs/compose.yml logs 
+	@docker compose -f ./srcs/docker-compose.yml logs 
 
 ps:
-	@docker compose -f ./srcs/compose.yml ps
+	@docker compose -f ./srcs/docker-compose.yml ps

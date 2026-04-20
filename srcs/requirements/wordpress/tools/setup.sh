@@ -64,4 +64,4 @@ if ! wp user get "${WORDPRESS_USER}" --allow-root > /dev/null 2>&1; then
         --allow-root
 fi
 
-exec /usr/sbin/php-fpm7.4 -F
+exec /usr/sbin/php-fpm7.4 -F #ejecutar el servidor de PHP-FPM en primer plano, para que el contenedor no se detenga
